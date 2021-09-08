@@ -7,3 +7,6 @@ edition = "2018"
 
 [dependencies]
 actix-web = "3.3.2"
+tera = "1.12.1"
+notify = "4.0.17"
+tokio = { version = "1.11.0", features = ["full"] }

@@ -4,6 +4,5 @@ use mvp::run;
 async fn main() -> std::io::Result<()> {
     // Maybe use pico args to get port from environment.
 
-    // Use Some("8080") to specify the port explicitly.
-    run(None)?.await
+    run(Some("8080"))?.await
 }
