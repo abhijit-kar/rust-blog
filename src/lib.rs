@@ -10,35 +10,34 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-fn watch(tera: Arc<RwLock<Tera>>) -> notify::Result<()> {
-    // Create a channel to receive the events.
-    let (tx, rx) = channel();
+fn watch(tera: Arc<RwLock<Tera>>) {
+    tokio::spawn(async move {
+        let (tx, rx) = channel();
 
-    // Automatically select the best implementation for your platform.
-    // You can also access each implementation directly e.g. INotifyWatcher.
-    let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(100))?;
+        let mut watcher: RecommendedWatcher =
+            Watcher::new(tx, Duration::from_millis(100)).expect("Failed to create watcher!");
 
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
-    watcher.watch(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/templates/"),
-        RecursiveMode::Recursive,
-    )?;
+        watcher
+            .watch(
+                concat!(env!("CARGO_MANIFEST_DIR"), "/templates/"),
+                RecursiveMode::Recursive,
+            )
+            .expect("Failed to watch Templates directory!");
 
-    // This is a simple loop, but you may want to use more complex logic here,
-    // for example to handle I/O.
-    loop {
-        match rx.recv() {
-            Ok(event) => {
-                if let DebouncedEvent::Write(_) = event {
-                    if let Err(e) = tera.write().unwrap().full_reload() {
-                        println!("failed to reload: {}", e);
+        loop {
+            match rx.recv() {
+                Ok(event) => {
+                    if let DebouncedEvent::Write(_) = event {
+                        tera.write()
+                            .unwrap()
+                            .full_reload()
+                            .expect("Failed to Reload!")
                     }
                 }
+                Err(e) => println!("Error while watching: {:?}", e),
             }
-            Err(e) => println!("watch error: {:?}", e),
         }
-    }
+    });
 }
 
 struct AppData {
@@ -95,13 +94,7 @@ pub async fn run(addr: Option<&str>) -> Result<Server, std::io::Error> {
 
     let tera = Arc::new(RwLock::new(tera));
 
-    let tera_clone = Arc::clone(&tera);
-
-    tokio::spawn(async move {
-        if let Err(e) = watch(tera_clone) {
-            println!("error: {:?}", e)
-        }
-    });
+    watch(Arc::clone(&tera));
 
     let server = HttpServer::new(move || {
         App::new()
