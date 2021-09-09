@@ -39,13 +39,12 @@ pub async fn run(addr: Option<&str>) -> Result<Server, std::io::Error> {
 
     println!("Listening on: http://{}", addr);
 
-    let mut tera = match Tera::new(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*")) {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Parsing error(s): {}", e);
-            ::std::process::exit(1);
-        }
-    };
+    let mut tera = Tera::new(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"))
+        .unwrap_or_else(|err| {
+            println!("Parsing error(s): {}", err);
+            ::std::process::exit(1)
+        });
+
     tera.register_filter("markdown", markdown_filter);
 
     let tera = Arc::new(RwLock::new(tera));
