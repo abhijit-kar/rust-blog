@@ -1,44 +1,13 @@
+mod watcher;
+
+use watcher::watch_template;
+
 use actix_web::{dev::Server, get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use std::sync::Arc;
-use std::{net::TcpListener, sync::RwLock};
+use std::{net::TcpListener, sync::Arc, sync::RwLock};
 
 use tokio;
 
 use tera::{Context, Tera};
-
-use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use std::sync::mpsc::channel;
-use std::time::Duration;
-
-fn watch(tera: Arc<RwLock<Tera>>) {
-    tokio::spawn(async move {
-        let (tx, rx) = channel();
-
-        let mut watcher: RecommendedWatcher =
-            Watcher::new(tx, Duration::from_millis(100)).expect("Failed to create watcher!");
-
-        watcher
-            .watch(
-                concat!(env!("CARGO_MANIFEST_DIR"), "/templates/"),
-                RecursiveMode::Recursive,
-            )
-            .expect("Failed to watch Templates directory!");
-
-        loop {
-            match rx.recv() {
-                Ok(event) => {
-                    if let DebouncedEvent::Write(_) = event {
-                        tera.write()
-                            .unwrap()
-                            .full_reload()
-                            .expect("Failed to Reload!")
-                    }
-                }
-                Err(e) => println!("Error while watching: {:?}", e),
-            }
-        }
-    });
-}
 
 struct AppData {
     tera: Arc<RwLock<Tera>>,
@@ -94,7 +63,7 @@ pub async fn run(addr: Option<&str>) -> Result<Server, std::io::Error> {
 
     let tera = Arc::new(RwLock::new(tera));
 
-    watch(Arc::clone(&tera));
+    watch_template(Arc::clone(&tera));
 
     let server = HttpServer::new(move || {
         App::new()
