@@ -8,37 +8,24 @@ use actix_web::{dev::Server, App, HttpServer};
 use std::{collections::HashMap, net::TcpListener, sync::Arc, sync::RwLock};
 use tokio;
 
+use pulldown_cmark::{html, Options, Parser};
 use tera::{to_value, try_get_value, Tera, Value};
-
-use comrak::{
-    markdown_to_html_with_plugins, plugins::syntect::SyntectAdapter, ComrakOptions, ComrakPlugins,
-};
 
 pub fn markdown_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
     let s = try_get_value!("markdown", "value", String, value);
 
-    let mut options = ComrakOptions::default();
-    options.extension.strikethrough = true;
-    options.extension.autolink = true;
-    options.extension.tasklist = true;
-    options.extension.description_lists = true;
-    options.extension.footnotes = true;
-    options.extension.tagfilter = true;
-    options.extension.table = true;
-    options.extension.header_ids = Some("user-content-".to_owned());
-    options.extension.front_matter_delimiter = Some("---".to_owned());
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    // options.insert(Options::ENABLE_TABLES);
+    // options.insert(Options::ENABLE_FOOTNOTES);
+    // options.insert(Options::ENABLE_TASKLISTS);
+    // options.insert(Options::ENABLE_SMART_PUNCTUATION);
+    let parser = Parser::new_ext(&s, options);
 
-    let adapter = SyntectAdapter::new("base16-eighties.dark");
+    let mut html_output = String::new();
+    html::push_html(&mut html_output, parser);
 
-    let mut plugins = ComrakPlugins::default();
-    plugins.render.codefence_syntax_highlighter = Some(&adapter);
-
-    Ok(to_value(markdown_to_html_with_plugins(
-        s.as_str(),
-        &options,
-        &plugins,
-    ))
-    .unwrap())
+    Ok(to_value(html_output).unwrap())
 }
 
 #[tokio::main]
