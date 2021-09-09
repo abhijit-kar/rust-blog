@@ -10,11 +10,13 @@ pub fn watch_template(tera: Arc<RwLock<Tera>>) {
     tokio::spawn(async move {
         let (tx, rx) = channel();
 
-        let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(100))
-            .unwrap_or_else(|err| {
+        let mut watcher: RecommendedWatcher = match Watcher::new(tx, Duration::from_millis(100)) {
+            Ok(w) => w,
+            Err(err) => {
                 println!("Failed to create watcher!: {:?}", err);
-                ::std::process::exit(1);
-            });
+                return;
+            }
+        };
 
         watcher
             .watch(
