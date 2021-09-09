@@ -1,46 +1,13 @@
+mod routes;
 mod watcher;
 
+use routes::{index, refresh, say_hello, AppData};
 use watcher::watch_template;
 
-use actix_web::{dev::Server, get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{dev::Server, App, HttpServer};
 use std::{net::TcpListener, sync::Arc, sync::RwLock};
-
+use tera::Tera;
 use tokio;
-
-use tera::{Context, Tera};
-
-struct AppData {
-    tera: Arc<RwLock<Tera>>,
-}
-
-#[get("/hello/{name}")]
-async fn say_hello(data: web::Data<AppData>, req: HttpRequest) -> impl Responder {
-    let name = req.match_info().get("name").unwrap_or("John");
-
-    let mut ctx = Context::new();
-    ctx.insert("name", name);
-
-    let rendered = data
-        .tera
-        .read()
-        .unwrap()
-        .render("index.html", &ctx)
-        .expect("Failed to Render!");
-
-    HttpResponse::Ok().body(rendered)
-}
-
-#[get("/refresh")]
-async fn refresh(data: web::Data<AppData>) -> impl Responder {
-    data.tera.write().unwrap().full_reload().unwrap();
-
-    HttpResponse::Ok()
-}
-
-#[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
 
 #[tokio::main]
 pub async fn run(addr: Option<&str>) -> Result<Server, std::io::Error> {
