@@ -10,6 +10,7 @@ actix-web = "3.3.2"
 tera = "1.12.1"
 notify = "4.0.17"
 tokio = { version = "1.11.0", features = ["full"] }
+comrak = "0.12.1"
 
 [lib]
 path = "src/lib/mod.rs"

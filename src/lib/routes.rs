@@ -1,5 +1,5 @@
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
-use std::{sync::Arc, sync::RwLock};
+use std::{fs, sync::Arc, sync::RwLock};
 use tera::{Context, Tera};
 
 pub struct AppData {
@@ -10,8 +10,12 @@ pub struct AppData {
 pub async fn say_hello(data: web::Data<AppData>, req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("John");
 
+    let contents = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/markdowns/test.md"))
+        .expect("Something went wrong reading the file");
+
     let mut ctx = Context::new();
     ctx.insert("name", name);
+    ctx.insert("content", &contents);
 
     let rendered = data
         .tera
